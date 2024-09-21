@@ -21,8 +21,8 @@ build: mod
 	
 
 # Comando para rodar o container Docker
-run:
-	make build
-	docker run -d -p 8080:8080 $(IMAGE_NAME)
+up: build
+	@echo "Iniciando o ambiente com docker-compose"
+	docker-compose up --build -d
 	@sleep 2 # Esperar um pouco para o container iniciar
 	@echo "A API está rodando em: http://localhost:8080"

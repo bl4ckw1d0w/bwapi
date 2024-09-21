@@ -1,0 +1,28 @@
+services:
+  bwapi:
+    build: .
+    container_name: bwapi
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres_db
+    environment:
+      POSTGRES_HOST: postgres_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bwdb
+
+  postgres_db:
+    image: postgres:14
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bwdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
