@@ -47,7 +47,7 @@ make build
 Para rodar o container Docker:
 
 ```bash
-make run
+make up
 ```
 
 Isso iniciará a API e ela estará disponível em `http://localhost:8080`.
@@ -67,6 +67,18 @@ Para remover o container criado e liberar recursos, execute:
 ```bash
 docker rm -f $(docker ps -a -q --filter ancestor=bwapi)
 ```
+
+### Criando Usuários
+
+Para criar um usuário, envie uma requisição `POST` para o endpoint `/create-user`:
+
+```bash
+curl -X POST http://localhost:8080/create-user \
+     -H "Content-Type: application/json" \
+     -d '{"username": "seu_usuario", "password": "mypassword"}'
+```
+
+Isso criará um novo usuário no banco de dados, com a senha criptografada.
 
 ## Contribuição
 
