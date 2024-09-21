@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	_ "github.com/lib/pq"
+	"github.com/elastic/go-elasticsearch/v7"
 )
 
 type User struct {
@@ -18,6 +21,7 @@ type User struct {
 }
 
 var db *sql.DB
+var es *elasticsearch.Client
 
 func main() {
 	// Pegando as variáveis de ambiente
@@ -27,7 +31,7 @@ func main() {
 	dbName := os.Getenv("POSTGRES_DB")
 
 	// String de conexão
-	psqlInfo := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", 
+	psqlInfo := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbUser, dbPassword, dbName)
 
 	// Conectando ao banco de dados
@@ -37,6 +41,18 @@ func main() {
 		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
 	}
 	defer db.Close()
+
+	// Inicializar o cliente Elasticsearch
+	es, err = elasticsearch.NewClient(elasticsearch.Config{
+		Addresses: []string{
+			os.Getenv("ELASTICSEARCH_HOST"),
+		},
+		Username: os.Getenv("ELASTICSEARCH_USER"),
+		Password: os.Getenv("ELASTICSEARCH_PASSWORD"),
+	})
+	if err != nil {
+		log.Fatalf("Erro ao criar cliente Elasticsearch: %v", err)
+	}
 
 	// Criar a tabela de usuários
 	createUserTable()
@@ -75,6 +91,12 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validar dados do usuário
+	if user.Username == "" || user.Password == "" {
+		http.Error(w, "Nome de usuário e senha são obrigatórios", http.StatusBadRequest)
+		return
+	}
+
 	// Hash da senha
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -89,6 +111,33 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Registrar o log no Elasticsearch
+	logToElasticsearch(fmt.Sprintf("Usuário %s criado com sucesso", user.Username))
+
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("Usuário criado com sucesso"))
+}
+
+func logToElasticsearch(message string) {
+	doc := map[string]interface{}{
+		"message": message,
+		"time":    time.Now(),
+	}
+	docJSON, err := json.Marshal(doc)
+	if err != nil {
+		log.Printf("Erro ao marshaller o documento: %v", err)
+		return
+	}
+
+	req := bytes.NewReader(docJSON)
+	res, err := es.Index("logs", req)
+	if err != nil {
+		log.Printf("Erro ao enviar log para Elasticsearch: %v", err)
+		return
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		log.Printf("Erro ao indexar log: %s", res.String())
+	}
 }

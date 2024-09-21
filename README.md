@@ -52,21 +52,42 @@ make up
 
 Isso iniciará a API e ela estará disponível em `http://localhost:8080`.
 
-### Executando o Docker Compose (Opcional)
 
-Se você preferir usar `docker-compose`, certifique-se de que o arquivo `docker-compose.yml` está configurado corretamente e então execute:
+>Antes de iniciar o Kibana, certifique-se de que o usuário `kibana_user` possui as permissões necessárias. Você pode verificar e configurar as permissões do usuário com os seguintes passos:  
 
-```bash
-docker-compose up --build
+## Verificação de Permissões do Kibana
+
+1. **Acesse o Elasticsearch:**
+   Execute o seguinte comando para verificar as permissões do usuário `kibana_user`:
+   ```bash
+   curl -u elastic:pass -X GET "http://localhost:9200/_security/user/kibana_user"
+   ```
+
+2. **Verifique o Papel Atribuído:**
+   O usuário deve ter um papel que contém as permissões necessárias, como `custom_kibana_admin`. Para verificar o papel, execute:
+   ```bash
+   curl -u elastic:pass -X GET "http://localhost:9200/_security/role/custom_kibana_admin"
+   ```
+
+3. **Atualize as Permissões, se Necessário:**
+   Caso as permissões não estejam adequadas, você pode atualizar o papel com o seguinte comando:
+   ```bash
+   curl -u elastic:pass -X PUT "http://localhost:9200/_security/role/custom_kibana_admin" -H 'Content-Type: application/json' -d '{
+     "cluster": ["all"],
+     "indices": [
+       {
+         "names": [".kibana*", "*"],
+         "privileges": ["all"]
+       }
+     ]
+   }'
+   ```
+
+4. **Reinicie o Kibana:**
+   Após garantir que as permissões estão corretas, reinicie o Kibana para aplicar as configurações.
 ```
 
-## Limpeza
-
-Para remover o container criado e liberar recursos, execute:
-
-```bash
-docker rm -f $(docker ps -a -q --filter ancestor=bwapi)
-```
+Dessa forma, fica claro como verificar e corrigir as permissões necessárias para o funcionamento do Kibana. Se precisar de mais ajustes, é só avisar!
 
 ### Criando Usuários
 
