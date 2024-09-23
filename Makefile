@@ -26,3 +26,4 @@ up: build
 	docker-compose up --build -d
 	@sleep 2 # Esperar um pouco para o container iniciar
 	@echo "A API está rodando em: http://localhost:8080"
+	@echo "O kibana esta rodando em: http://localhost:5601/"

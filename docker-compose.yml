@@ -1,28 +1,54 @@
+version: '3.8'
+
 services:
   bwapi:
     build: .
-    container_name: bwapi
     ports:
       - "8080:8080"
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=bwapi
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200  # Variável para Elasticsearch
+      - ELASTICSEARCH_USER=elastic  # Usuário padrão do Elasticsearch
+      - ELASTICSEARCH_PASSWORD=pass  # Senha do Elasticsearch
     depends_on:
-      - postgres_db
-    environment:
-      POSTGRES_HOST: postgres_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: bwdb
+      - db
+      - elasticsearch
 
-  postgres_db:
-    image: postgres:14
-    container_name: postgres_db
+  db:
+    image: postgres:latest
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: bwdb
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bwapi
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.0
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=pass  # Senha do usuário 'elastic'
+      - xpack.security.http.ssl.enabled=false  # Desabilita HTTPS
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.5.0
+    environment:
+      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+      ELASTICSEARCH_USERNAME: "kibana_user"      # Use 'elastic' como usuário padrão
+      ELASTICSEARCH_PASSWORD: "kibana_pass"          # A mesma senha do Elasticsearch
+    ports:
+      - "5601:5601"  # Porta padrão do Kibana
+    depends_on:
+      - elasticsearch
 
 volumes:
-  pgdata:
+  postgres_data:
+  es_data:
